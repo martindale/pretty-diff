@@ -1,36 +1,49 @@
 #!/usr/bin/env node
 
-var fs = require( "fs" ),
-	exec = require( "child_process" ).exec,
-	diff = require( "./diff" );
+var diff = require( "./diff" );
 
-diff( process.argv.slice( 2 ).join( " " ), function( error, parsedDiff ) {
-	if ( error ) {
-		process.stderr.write( error );
-		return;
-	}
+function splitByFile( diff ) {
+	var filename,
+		isEmpty = true;
+		files = {};
 
-	if ( !parsedDiff ) {
-		console.log( "No differences" );
-		return;
-	}
-
-	generatePrettyDiff( parsedDiff );
-});
-
-function generatePrettyDiff( parsedDiff ) {
-	var template = fs.readFileSync( __dirname + "/template.html", "utf8" ),
-		diffHtml = "";
-
-		for ( var file in parsedDiff ) {
-			diffHtml += "<h2>" + file + "</h2>" +
-			"<div class='file-diff'><div>" +
-				markUpDiff( parsedDiff[ file ] ) +
-			"</div></div>";
+	diff.split( "\n" ).forEach(function( line, i ) {
+		// Unmerged paths, and possibly other non-diffable files
+		// https://github.com/scottgonzalez/pretty-diff/issues/11
+		if ( !line || line.charAt( 0 ) === "*" ) {
+			return;
 		}
 
-		fs.writeFileSync( "/tmp/diff.html", template.replace( "{{diff}}", diffHtml ) );
-		exec( "open /tmp/diff.html" );
+		if ( line.charAt( 0 ) === "d" ) {
+			isEmpty = false;
+			filename = line.replace( /^diff --git a\/(\S+).*$/, "$1" );
+			files[ filename ] = [];
+		}
+
+		files[ filename ].push( line );
+	});
+
+	return isEmpty ? null : files;
+}
+
+module.exports = function( input ) {
+	
+	var files = splitByFile( input );
+	
+	return generatePrettyDiff( files );
+}
+
+function generatePrettyDiff( parsedDiff ) {
+	var diffHtml = "";
+
+	for ( var file in parsedDiff ) {
+		diffHtml += "<h2>" + file + "</h2>" +
+		"<div class='file-diff'><div>" +
+			markUpDiff( parsedDiff[ file ] ) +
+		"</div></div>";
+	}
+
+	return diffHtml;
 }
 
 var markUpDiff = function() {
