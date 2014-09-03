@@ -26,21 +26,14 @@ function splitByFile( diff ) {
 	return isEmpty ? null : files;
 }
 
-module.exports = function( input ) {
-	
-	var files = splitByFile( input );
-	
-	return generatePrettyDiff( files );
-}
-
 function generatePrettyDiff( parsedDiff ) {
 	var diffHtml = "";
 
 	for ( var file in parsedDiff ) {
-		diffHtml += "<h2>" + file + "</h2>" +
-		"<div class='file-diff'><div>" +
+		diffHtml += "<h5>" + file + "</h5>" +
+		"<pre class='file-diff'><code>" +
 			markUpDiff( parsedDiff[ file ] ) +
-		"</div></div>";
+		"</code></pre>";
 	}
 
 	return diffHtml;
@@ -67,7 +60,15 @@ var markUpDiff = function() {
 	return function( diff ) {
 		return diff.map(function( line ) {
 			var type = line.charAt( 0 );
-			return "<pre class='" + diffClasses[ type ] + "'>" + escape( line ) + "</pre>";
-		}).join( "\n" );
+			return "<div class='" + diffClasses[ type ] + "'>" + escape( line ) + "</div>";
+		}).join('');
 	};
 }();
+
+
+module.exports = function( input ) {
+	
+	var files = splitByFile( input );
+	
+	return generatePrettyDiff( files );
+}
